@@ -1,17 +1,11 @@
 package commitlog
 
 import (
-	"bytes"
-	"encoding/binary"
-	"io"
 	"os"
-	"sort"
 	"sync"
 
 	"github.com/pkg/errors"
 	"github.com/tysonmote/gommap"
-
-	proto "github.com/liftbridge-io/liftbridge/server/protocol"
 )
 
 var errIndexCorrupt = errors.New("corrupt index file")
@@ -51,20 +45,11 @@ type relEntry struct {
 }
 
 func newRelEntry(e *entry, baseOffset int64) relEntry {
-	return relEntry{
-		Offset:    int32(e.Offset - baseOffset),
-		Timestamp: e.Timestamp,
-		Position:  int32(e.Position),
-		Size:      e.Size,
-	}
+	_ = "STUB: not implemented"
+	return *new(relEntry)
 }
 
-func (rel relEntry) fill(e *entry, baseOffset int64) {
-	e.Offset = baseOffset + int64(rel.Offset)
-	e.Timestamp = rel.Timestamp
-	e.Position = int64(rel.Position)
-	e.Size = rel.Size
-}
+func (rel relEntry) fill(e *entry, baseOffset int64) { _ = "STUB: not implemented"; return }
 
 type options struct {
 	path       string
@@ -72,240 +57,78 @@ type options struct {
 	baseOffset int64
 }
 
-func newIndex(opts options) (idx *index, err error) {
-	if opts.bytes == 0 {
-		opts.bytes = 10 * 1024 * 1024
-	}
-	if opts.path == "" {
-		return nil, errors.New("path is empty")
-	}
-	idx = &index{
-		options: opts,
-	}
-	idx.file, err = os.OpenFile(opts.path, os.O_RDWR|os.O_CREATE, 0644)
-	if err != nil {
-		return nil, errors.Wrap(err, "open file failed")
-	}
-	fi, err := idx.file.Stat()
-	if err != nil {
-		return nil, errors.Wrap(err, "stat file failed")
-	}
-	// Pre-allocate the index if we just created it.
-	if fi.Size() == 0 {
-		if err := idx.file.Truncate(roundDown(opts.bytes, entryWidth)); err != nil {
-			return nil, err
-		}
-	}
-	// Get updated stats after resize.
-	fi, err = idx.file.Stat()
-	if err != nil {
-		return nil, errors.Wrap(err, "stat file failed")
-	}
-	idx.position = fi.Size()
-	idx.size = fi.Size()
+func newIndex(opts options) (idx *index, err error) { _ = "STUB: not implemented"; return nil, nil }
 
-	idx.mmap, err = gommap.Map(idx.file.Fd(), gommap.PROT_READ|gommap.PROT_WRITE, gommap.MAP_SHARED)
-	if err != nil {
-		return nil, errors.Wrap(err, "mmap file failed")
-	}
-	return idx, nil
-}
+// Pre-allocate the index if we just created it.
+
+// Get updated stats after resize.
 
 // Position returns the current position in the index to write to next. This
 // value also represents the total length of the index.
-func (idx *index) Position() int64 {
-	idx.mu.RLock()
-	defer idx.mu.RUnlock()
-	return idx.position
-}
+func (idx *index) Position() int64 { _ = "STUB: not implemented"; return 0 }
 
-func (idx *index) CountEntries() int64 {
-	idx.mu.RLock()
-	defer idx.mu.RUnlock()
-	return idx.position / entryWidth
-}
+func (idx *index) CountEntries() int64 { _ = "STUB: not implemented"; return 0 }
 
-func (idx *index) writeEntries(entries []*entry) (err error) {
-	b := new(bytes.Buffer)
-	for _, entry := range entries {
-		relEntry := newRelEntry(entry, idx.baseOffset)
-		if err = binary.Write(b, proto.Encoding, relEntry); err != nil {
-			return errors.Wrap(err, "binary write failed")
-		}
-	}
-	idx.mu.Lock()
-	defer idx.mu.Unlock()
-	if idx.closed {
-		return ErrSegmentClosed
-	}
-	if err := idx.writeAt(b.Bytes(), idx.position); err != nil {
-		return errors.Wrap(err, "index write failed")
-	}
-	idx.position += entryWidth * int64(len(entries))
-	return nil
-}
+func (idx *index) writeEntries(entries []*entry) (err error) { _ = "STUB: not implemented"; return nil }
 
 // ReadEntryAtFileOffset is used to read an index entry at the given
 // byte offset of the index file. ReadEntryAtLogOffset is generally
 // more useful for higher level use.
 func (idx *index) ReadEntryAtFileOffset(e *entry, fileOffset int64) (err error) {
-	p := make([]byte, entryWidth)
-	if _, err = idx.ReadAt(p, fileOffset); err != nil {
-		return err
-	}
-	b := bytes.NewReader(p)
-	rel := &relEntry{}
-	err = binary.Read(b, proto.Encoding, rel)
-	if err != nil {
-		return errors.Wrap(err, "binary read failed")
-	}
-	idx.mu.RLock()
-	rel.fill(e, idx.baseOffset)
-	idx.mu.RUnlock()
+	_ = "STUB: not implemented"
 	return nil
 }
 
 // ReadEntryAtLogOffset is used to read an index entry at the given
 // log offset of the index file.
 func (idx *index) ReadEntryAtLogOffset(e *entry, logOffset int64) error {
-	return idx.ReadEntryAtFileOffset(e, logOffset*entryWidth)
+	_ = "STUB: not implemented"
+	return nil
 }
 
 func (idx *index) ReadAt(p []byte, offset int64) (n int, err error) {
-	idx.mu.RLock()
-	defer idx.mu.RUnlock()
-	if idx.closed {
-		return 0, ErrSegmentClosed
-	}
-	if idx.position < offset+entryWidth {
-		return 0, io.EOF
-	}
-	n = copy(p, idx.mmap[offset:offset+entryWidth])
-	return n, nil
+	_ = "STUB: not implemented"
+	return 0, nil
 }
 
 func (idx *index) writeAt(p []byte, offset int64) error {
+	_ = "STUB: not implemented"
 	// Check if we need to expand the index file.
-	if pSize := int64(len(p)); offset+pSize >= idx.size {
-		// Expand the index file.
-		newSize := roundDown(idx.size+idx.bytes, entryWidth)
-		if newSize < offset+pSize {
-			newSize = idx.size + pSize
-		}
-		err := idx.file.Truncate(newSize)
-		if err != nil {
-			panic(errors.Wrap(err, "failed to expand index file"))
-		}
-		idx.size = newSize
-
-		// Re-mmap the index.
-		oldMmap := idx.mmap
-		idx.mmap, err = gommap.Map(idx.file.Fd(), gommap.PROT_READ|gommap.PROT_WRITE, gommap.MAP_SHARED)
-		if err != nil {
-			panic(errors.Wrap(err, "failed to mmap expanded index file"))
-		}
-		// Unmap the old index.
-		if err := oldMmap.UnsafeUnmap(); err != nil {
-			return errors.Wrap(err, "failed to unmap memory mapped index file")
-		}
-	}
-
-	copy(idx.mmap[offset:], p)
 	return nil
 }
 
-func (idx *index) Sync() error {
-	idx.mu.Lock()
-	defer idx.mu.Unlock()
-	return idx.sync()
-}
+// Expand the index file.
 
-func (idx *index) sync() error {
-	if idx.closed {
-		return ErrSegmentClosed
-	}
-	if err := idx.file.Sync(); err != nil {
-		return errors.Wrap(err, "file sync failed")
-	}
-	if err := idx.mmap.Sync(gommap.MS_SYNC); err != nil {
-		return errors.Wrap(err, "mmap sync failed")
-	}
-	return nil
-}
+// Re-mmap the index.
 
-func (idx *index) Close() error {
-	idx.mu.Lock()
-	defer idx.mu.Unlock()
-	if idx.closed {
-		return nil
-	}
-	if err := idx.sync(); err != nil {
-		return err
-	}
-	if err := idx.shrink(); err != nil {
-		return err
-	}
-	if err := idx.file.Close(); err != nil {
-		return err
-	}
-	if err := idx.mmap.UnsafeUnmap(); err != nil {
-		return err
-	}
-	idx.closed = true
-	return nil
-}
+// Unmap the old index.
+
+func (idx *index) Sync() error { _ = "STUB: not implemented"; return nil }
+
+func (idx *index) sync() error { _ = "STUB: not implemented"; return nil }
+
+func (idx *index) Close() error { _ = "STUB: not implemented"; return nil }
 
 // Shrink truncates the memory-mapped index file to the size of its contents.
-func (idx *index) Shrink() error {
-	idx.mu.RLock()
-	defer idx.mu.RUnlock()
-	return idx.shrink()
-}
+func (idx *index) Shrink() error { _ = "STUB: not implemented"; return nil }
 
-func (idx *index) shrink() error {
-	return idx.file.Truncate(idx.position)
-}
+func (idx *index) shrink() error { _ = "STUB: not implemented"; return nil }
 
-func (idx *index) Name() string {
-	return idx.file.Name()
-}
+func (idx *index) Name() string { _ = "STUB: not implemented"; return "" }
 
 func (idx *index) InitializePosition() (*entry, error) {
+	_ = "STUB: not implemented"
 	// Find the first empty entry.
-	n := int(idx.size / entryWidth)
-	entry := new(entry)
-	i := sort.Search(n, func(i int) bool {
-		if err := idx.ReadEntryAtFileOffset(entry, int64(i*entryWidth)); err != nil {
-			panic(err)
-		}
-		return entry.Position == 0 && entry.Timestamp == 0 && entry.Size == 0
-	})
-	// Initialize the position.
-	idx.mu.Lock()
-	idx.position = int64(i * entryWidth)
-	idx.mu.Unlock()
-
-	if i == 0 {
-		// Index is empty.
-		return nil, nil
-	}
-
-	// Return the last entry in the index.
-	i--
-	if err := idx.ReadEntryAtFileOffset(entry, int64(i*entryWidth)); err != nil {
-		return nil, err
-	}
-	// Do some sanity checks.
-	if entry.Offset < idx.baseOffset {
-		return nil, errIndexCorrupt
-	}
-	idx.mu.RLock()
-	defer idx.mu.RUnlock()
-	if idx.position%entryWidth != 0 {
-		return nil, errIndexCorrupt
-	}
-	return entry, nil
+	return nil, nil
 }
+
+// Initialize the position.
+
+// Index is empty.
+
+// Return the last entry in the index.
+
+// Do some sanity checks.
 
 type indexScanner struct {
 	idx    *index
@@ -313,21 +136,9 @@ type indexScanner struct {
 	offset int64
 }
 
-func newIndexScanner(idx *index) *indexScanner {
-	return &indexScanner{idx: idx, entry: &entry{}}
-}
+func newIndexScanner(idx *index) *indexScanner { _ = "STUB: not implemented"; return nil }
 
-func (s *indexScanner) Scan() (*entry, error) {
-	err := s.idx.ReadEntryAtLogOffset(s.entry, s.offset)
-	if err != nil {
-		return nil, err
-	}
-	if s.entry.Offset == 0 && s.offset != 0 {
-		return nil, io.EOF
-	}
-	s.offset++
-	return s.entry, err
-}
+func (s *indexScanner) Scan() (*entry, error) { _ = "STUB: not implemented"; return nil, nil }
 
 // reverseIndexScanner is used to iterate over entries in reverse order
 // (newest to oldest).
@@ -340,39 +151,22 @@ type reverseIndexScanner struct {
 // newReverseIndexScanner creates a scanner that iterates from the given
 // starting offset backwards to the beginning of the index.
 func newReverseIndexScanner(idx *index, startOffset int64) *reverseIndexScanner {
-	return &reverseIndexScanner{
-		idx:    idx,
-		entry:  &entry{},
-		offset: startOffset,
-	}
+	_ = "STUB: not implemented"
+	return nil
 }
 
 // newReverseIndexScannerFromEnd creates a scanner that starts at the last
 // entry in the index and iterates backwards.
 func newReverseIndexScannerFromEnd(idx *index) *reverseIndexScanner {
+	_ = "STUB: not implemented"
 	// Get the number of entries in the index
-	numEntries := idx.CountEntries()
-	startOffset := numEntries - 1
-	if startOffset < 0 {
-		startOffset = -1 // Will return EOF on first Scan()
-	}
-	return &reverseIndexScanner{
-		idx:    idx,
-		entry:  &entry{},
-		offset: startOffset,
-	}
+	return nil
 }
+
+// Will return EOF on first Scan()
 
 // Scan reads the current entry and moves to the previous one.
 // Returns io.EOF when there are no more entries.
-func (s *reverseIndexScanner) Scan() (*entry, error) {
-	if s.offset < 0 {
-		return nil, io.EOF
-	}
-	err := s.idx.ReadEntryAtLogOffset(s.entry, s.offset)
-	if err != nil {
-		return nil, err
-	}
-	s.offset-- // Move to previous entry
-	return s.entry, nil
-}
+func (s *reverseIndexScanner) Scan() (*entry, error) { _ = "STUB: not implemented"; return nil, nil }
+
+// Move to previous entry

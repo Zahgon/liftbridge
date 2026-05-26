@@ -1,7 +1,6 @@
 package commitlog
 
 import (
-	"errors"
 	"hash/crc32"
 
 	client "github.com/liftbridge-io/liftbridge-api/v2/go"
@@ -28,28 +27,7 @@ type Message struct {
 }
 
 // Encode the Message into the packetEncoder.
-func (m *Message) Encode(e packetEncoder) error {
-	e.Push(&crcField{})
-	e.PutInt8(m.MagicByte)
-	e.PutInt8(m.Attributes)
-	if err := e.PutBytes(m.Key); err != nil {
-		return err
-	}
-	if err := e.PutBytes(m.Value); err != nil {
-		return err
-	}
-	e.PutInt16(int16(len(m.Headers)))
-	for key, header := range m.Headers {
-		if err := e.PutString(key); err != nil {
-			return err
-		}
-		if err := e.PutBytes(header); err != nil {
-			return err
-		}
-	}
-	e.Pop()
-	return nil
-}
+func (m *Message) Encode(e packetEncoder) error { _ = "STUB: not implemented"; return nil }
 
 // crcField is used to perform a CRC32 check on a message.
 type crcField struct {
@@ -58,106 +36,59 @@ type crcField struct {
 
 // SaveOffset sets the position to fill the CRC digest.
 func (f *crcField) SaveOffset(in int) {
-	f.StartOffset = in
+	_ = "STUB: not implemented"
+
+	// ReserveSize sets the number of bytes to reserve for the CRC digest.
+	return
 }
 
-// ReserveSize sets the number of bytes to reserve for the CRC digest.
 func (f *crcField) ReserveSize() int {
-	return 4
+	_ = "STUB: not implemented"
+
+	// Fill sets the CRC digest.
+	return 0
 }
 
-// Fill sets the CRC digest.
-func (f *crcField) Fill(curOffset int, buf []byte) error {
-	crc := crc32.Checksum(buf[f.StartOffset+4:curOffset], crc32cTable)
-	encoding.PutUint32(buf[f.StartOffset:], crc)
-	return nil
-}
+func (f *crcField) Fill(curOffset int, buf []byte) error { _ = "STUB: not implemented"; return nil }
 
 // Check the CRC digest.
-func (f *crcField) Check(curOffset int, buf []byte) error {
-	crc := crc32.Checksum(buf[f.StartOffset+4:curOffset], crc32cTable)
-	if crc != encoding.Uint32(buf[f.StartOffset:]) {
-		return errors.New("crc didn't match")
-	}
-	return nil
-}
+func (f *crcField) Check(curOffset int, buf []byte) error { _ = "STUB: not implemented"; return nil }
 
 // SerializedMessage is a serialized message read from the log.
 type SerializedMessage []byte
 
 // Crc returns the CRC32 digest of the message.
-func (m SerializedMessage) Crc() uint32 {
-	return encoding.Uint32(m)
-}
+func (m SerializedMessage) Crc() uint32 { _ = "STUB: not implemented"; return 0 }
 
 // MagicByte returns the byte used for encoding protocol version detection.
 func (m SerializedMessage) MagicByte() int8 {
-	return int8(m[4])
+	_ = "STUB: not implemented"
+
+	// Attributes returns the byte used for message flags.
+	return 0
 }
 
-// Attributes returns the byte used for message flags.
 func (m SerializedMessage) Attributes() int8 {
-	return int8(m[5])
+	_ = "STUB: not implemented"
+
+	// Key returns the message key.
+	return 0
 }
 
-// Key returns the message key.
-func (m SerializedMessage) Key() []byte {
-	start, end, size := m.keyOffsets()
-	if size == -1 {
-		return nil
-	}
-	return m[start+4 : end]
-}
+func (m SerializedMessage) Key() []byte { _ = "STUB: not implemented"; return nil }
 
 // Value returns the message value.
-func (m SerializedMessage) Value() []byte {
-	start, end, size := m.valueOffsets()
-	if size == -1 {
-		return nil
-	}
-	return m[start+4 : end]
-}
+func (m SerializedMessage) Value() []byte { _ = "STUB: not implemented"; return nil }
 
 // Headers returns the message headers map.
-func (m SerializedMessage) Headers() map[string][]byte {
-	var (
-		_, valueEnd, _ = m.valueOffsets()
-		n              = valueEnd
-		numHeaders     = encoding.Uint16(m[n:])
-		headers        = make(map[string][]byte, numHeaders)
-	)
-	n += 2
-	for i := uint16(0); i < numHeaders; i++ {
-		keySize := encoding.Uint16(m[n:])
-		n += 2
-		key := string(m[n : n+int32(keySize)])
-		n += int32(keySize)
-		valueSize := encoding.Uint32(m[n:])
-		n += 4
-		value := m[n : n+int32(valueSize)]
-		n += int32(valueSize)
-		headers[key] = value
-	}
-	return headers
-}
+func (m SerializedMessage) Headers() map[string][]byte { _ = "STUB: not implemented"; return nil }
 
 func (m SerializedMessage) keyOffsets() (start, end, size int32) {
-	start = 6
-	size = int32(encoding.Uint32(m[start:]))
-	end = start + 4
-	if size != -1 {
-		end += size
-	}
-	return
+	_ = "STUB: not implemented"
+	return 0, 0, 0
 }
 
 func (m SerializedMessage) valueOffsets() (start, end, size int32) {
-	_, keyEnd, _ := m.keyOffsets()
-	start = keyEnd
-	size = int32(encoding.Uint32(m[start:]))
-	end = start + 4
-	if size != -1 {
-		end += size
-	}
-	return
+	_ = "STUB: not implemented"
+	return 0, 0, 0
 }

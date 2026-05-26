@@ -3,7 +3,6 @@ package server
 import (
 	"bytes"
 	"context"
-	"encoding/binary"
 	"sync"
 	"time"
 
@@ -46,14 +45,8 @@ type replicator struct {
 }
 
 func newReplicator(epoch uint64, replica string, p *partition) *replicator {
-	return &replicator{
-		epoch:      epoch,
-		replica:    replica,
-		partition:  p,
-		requests:   make(chan replicationRequest, 1),
-		maxLagTime: p.srv.config.Clustering.ReplicaMaxLagTime,
-		leader:     p.srv.config.Clustering.ServerID,
-	}
+	_ = "STUB: not implemented"
+	return nil
 }
 
 // start a long-running replication loop for the given leader epoch until the
@@ -63,235 +56,73 @@ func newReplicator(epoch uint64, replica string, p *partition) *replicator {
 // available. The response will also include the leader epoch and HW. If the
 // replica doesn't send a request or catch up to the leader's log in
 // maxLagTime, it will be removed from the ISR until it catches back up.
-func (r *replicator) start(stop <-chan struct{}) {
-	r.mu.Lock()
-	now := time.Now()
-	r.lastSeen = now
-	r.lastCaughtUp = now
-	r.writer = newReplicationProtocolWriter(r, stop)
-	r.mu.Unlock()
+func (r *replicator) start(stop <-chan struct{}) { _ = "STUB: not implemented"; return }
 
-	// Start a goroutine to track the replica's health.
-	r.partition.srv.startGoroutine(func() { r.tick(stop) })
+// Start a goroutine to track the replica's health.
 
-	var req replicationRequest
-	for {
-		select {
-		case <-stop:
-			return
-		case req = <-r.requests:
-		}
+// Update the ISR replica's latest offset for the partition. This is
+// used by the leader to know when to commit messages.
 
-		r.mu.Lock()
-		r.lastSeen = req.received
-		r.mu.Unlock()
+// Check if we're caught up.
 
-		// Update the ISR replica's latest offset for the partition. This is
-		// used by the leader to know when to commit messages.
-		r.partition.updateISRLatestOffset(r.replica, req.Offset)
+// Create a log reader starting at the requested offset. Wrap this in
+// an anonymous function to avoid leaking the deferred context cancel.
 
-		var (
-			latest   = r.partition.log.NewestOffset()
-			earliest = r.partition.log.OldestOffset()
-		)
+// Send a response to short-circuit request timeout.
 
-		// Check if we're caught up.
-		if req.Offset >= latest {
-			r.caughtUp(stop, latest, req)
-			continue
-		}
+// Send a batch of messages to the replica.
 
-		// Create a log reader starting at the requested offset. Wrap this in
-		// an anonymous function to avoid leaking the deferred context cancel.
-		func() {
-			ctx, cancel := context.WithCancel(context.Background())
-			defer cancel()
+// Send a response to short-circuit request timeout.
 
-			reader, err := r.partition.log.NewReader(req.Offset+1, true)
-			if err != nil {
-				r.partition.srv.logger.Errorf(
-					"Failed to create replication reader for partition %s "+
-						"and replica %s (requested offset %d, earliest %d, latest %d): %v",
-					r.partition, r.replica, req.Offset+1, earliest, latest, err)
-				// Send a response to short-circuit request timeout.
-				if err := r.sendHW(req.request); err != nil {
-					r.partition.srv.logger.Errorf("Failed to send HW for partition %s to replica %s: %v",
-						r.partition, req.ReplicaID, err)
-				}
-				return
-			}
-
-			// Send a batch of messages to the replica.
-			if err := r.replicate(ctx, reader, req.request, req.Offset); err != nil {
-				// Send a response to short-circuit request timeout.
-				if err := r.sendHW(req.request); err != nil {
-					r.partition.srv.logger.Errorf("Failed to send HW for partition %s to replica %s: %v",
-						r.partition, req.ReplicaID, err)
-				}
-				return
-			}
-		}()
-	}
-}
-
-func (r *replicator) request(req replicationRequest) {
-	select {
-	case r.requests <- req:
-	default:
-		r.partition.srv.logger.Warnf("Dropped replication request for partition %s from replica %s",
-			r.partition, req.ReplicaID)
-	}
-}
+func (r *replicator) request(req replicationRequest) { _ = "STUB: not implemented"; return }
 
 // tick is a long-running call that checks to see if the follower hasn't sent
 // any replication requests or hasn't consumed up to the leader's log end
 // offset for the lag-time duration. If this is the case, the follower is
 // removed from the ISR until it catches back up.
-func (r *replicator) tick(stop <-chan struct{}) {
-	timer := time.NewTimer(r.maxLagTime)
-	defer timer.Stop()
-	for {
-		select {
-		case <-stop:
-			return
-		case <-timer.C:
-		}
-		r.mu.RLock()
-		var (
-			now                 = time.Now()
-			lastSeenElapsed     = now.Sub(r.lastSeen)
-			lastCaughtUpElapsed = now.Sub(r.lastCaughtUp)
-		)
-		r.mu.RUnlock()
-		outOfSync := lastSeenElapsed > r.maxLagTime || lastCaughtUpElapsed > r.maxLagTime
-		if outOfSync && r.partition.inISR(r.replica) {
-			// Follower has not sent a request or has not caught up in
-			// maxLagTime, so remove it from the ISR.
-			r.partition.srv.logger.Errorf("Replica %s for partition %s exceeded max lag time "+
-				"(last seen: %s, last caught up: %s), removing from ISR",
-				r.replica, r.partition, lastSeenElapsed, lastCaughtUpElapsed)
+func (r *replicator) tick(stop <-chan struct{}) { _ = "STUB: not implemented"; return }
 
-			r.shrinkISR()
-		} else if !outOfSync && !r.partition.inISR(r.replica) {
-			// Add replica back into ISR.
-			r.partition.srv.logger.Infof("Replica %s for partition %s caught back up with leader, "+
-				"rejoining ISR", r.replica, r.partition)
-			r.expandISR()
-		}
+// Follower has not sent a request or has not caught up in
+// maxLagTime, so remove it from the ISR.
 
-		timer.Reset(computeTick(lastCaughtUpElapsed, r.maxLagTime))
-	}
-}
+// Add replica back into ISR.
 
 // shrinkISR sends a ShrinkISR request to the controller to remove the replica
 // from the ISR.
-func (r *replicator) shrinkISR() {
-	req := &proto.ShrinkISROp{
-		Stream:          r.partition.Stream,
-		Partition:       r.partition.Id,
-		ReplicaToRemove: r.replica,
-		Leader:          r.leader,
-		LeaderEpoch:     r.epoch,
-	}
-	if err := r.partition.srv.metadata.ShrinkISR(context.Background(), req); err != nil {
-		r.partition.srv.logger.Errorf(
-			"Failed to remove replica %s for partition %s from ISR: %v",
-			r.replica, r.partition, err.Err())
-	}
-}
+func (r *replicator) shrinkISR() { _ = "STUB: not implemented"; return }
 
 // expandISR sends an ExpandISR request to the controller to add the replica to
 // the ISR.
-func (r *replicator) expandISR() {
-	req := &proto.ExpandISROp{
-		Stream:       r.partition.Stream,
-		Partition:    r.partition.Id,
-		ReplicaToAdd: r.replica,
-		Leader:       r.leader,
-		LeaderEpoch:  r.epoch,
-	}
-	if err := r.partition.srv.metadata.ExpandISR(context.Background(), req); err != nil {
-		r.partition.srv.logger.Errorf(
-			"Failed to add replica %s for partition %s to ISR: %v",
-			r.replica, r.partition, err.Err())
-	}
-}
+func (r *replicator) expandISR() { _ = "STUB: not implemented"; return }
 
 // replicate sends a batch of messages to the given NATS inbox along with the
 // leader epoch and HW.
 func (r *replicator) replicate(
 	ctx context.Context, reader *commitlog.Reader, request *nats.Msg, offset int64) error {
-
-	var (
-		newestOffset = r.partition.log.NewestOffset()
-		message      commitlog.SerializedMessage
-		err          error
-	)
-	for offset < newestOffset && int64(r.writer.Len()) < r.partition.srv.config.Clustering.ReplicationMaxBytes {
-		message, offset, _, _, err = reader.ReadMessage(ctx, r.headersBuf[:])
-		if err != nil {
-			r.partition.srv.logger.Errorf("Failed to read message while replicating: %v", err)
-			return err
-		}
-
-		// Check if this message will put us over the batch size limit. If it
-		// does, flush the batch now.
-		batchSize := int64(len(message)) + int64(len(r.headersBuf)) + int64(r.writer.Len())
-		if batchSize > r.partition.srv.config.Clustering.ReplicationMaxBytes {
-			break
-		}
-
-		// Write the message to the buffer.
-		if err := r.writer.Write(offset, r.headersBuf[:], message); err != nil {
-			r.partition.srv.logger.Errorf("Failed to write message to buffer while replicating: %v", err)
-			return err
-		}
-	}
-
-	// Flush the batch.
-	if err := r.writer.Flush(request.Respond); err != nil {
-		r.partition.srv.logger.Errorf("Failed to flush buffer while replicating: %v", err)
-		return err
-	}
+	_ = "STUB: not implemented"
 	return nil
 }
+
+// Check if this message will put us over the batch size limit. If it
+// does, flush the batch now.
+
+// Write the message to the buffer.
+
+// Flush the batch.
 
 // caughtUp is called when the follower has caught up with the leader's log.
 // This will register a data waiter on the log so that the leader can notify
 // the follower when new data is available to replicate.
 func (r *replicator) caughtUp(stop <-chan struct{}, leo int64, req replicationRequest) {
-	r.mu.Lock()
-	r.lastCaughtUp = req.received
-	waiter := r.waiter
-	if waiter == nil {
-		// Register a waiter to be notified when new messages are written after
-		// the current log end offset to preempt an idle follower.
-		waiter = r.partition.log.NotifyLEO(r, leo)
-		r.partition.srv.startGoroutine(func() {
-			select {
-			case <-waiter:
-				r.mu.Lock()
-				r.waiter = nil
-				r.mu.Unlock()
-				r.partition.sendPartitionNotification(req.ReplicaID)
-			case <-stop:
-			}
-		})
-		r.waiter = waiter
-	}
-	r.mu.Unlock()
-
-	if err := r.sendHW(req.request); err != nil {
-		r.partition.srv.logger.Errorf("Failed to send HW for partition %s to replica %s: %v",
-			r.partition, req.ReplicaID, err)
-	}
+	_ = "STUB: not implemented"
+	return
 }
+
+// Register a waiter to be notified when new messages are written after
+// the current log end offset to preempt an idle follower.
 
 // sendHW sends the leader epoch and HW to the given NATS inbox.
-func (r *replicator) sendHW(request *nats.Msg) error {
-	r.writer.Reset()
-	return r.writer.Flush(request.Respond)
-}
+func (r *replicator) sendHW(request *nats.Msg) error { _ = "STUB: not implemented"; return nil }
 
 type replicationProtocolWriter interface {
 	Write(offset int64, headers, message []byte) error
@@ -310,55 +141,29 @@ type protocolWriter struct {
 }
 
 func newReplicationProtocolWriter(r *replicator, stop <-chan struct{}) replicationProtocolWriter {
-	w := &protocolWriter{
-		replicator: r,
-		buf:        new(bytes.Buffer),
-		log:        r.partition.log,
-		stop:       stop,
-	}
-	w.Reset()
-	return w
+	_ = "STUB: not implemented"
+	return *new(replicationProtocolWriter)
 }
 
 func (w *protocolWriter) Write(offset int64, headers, message []byte) error {
-	if _, err := w.buf.Write(headers); err != nil {
-		return err
-	}
-	if _, err := w.buf.Write(message); err != nil {
-		return err
-	}
-	w.lastOffset = offset
+	_ = "STUB: not implemented"
 	return nil
 }
 
 func (w *protocolWriter) Flush(write func([]byte) error) error {
-	data := w.buf.Bytes()
-	// Replace the HW.
-	proto.Encoding.PutUint64(data[w.dataPos+8:], uint64(w.log.HighWatermark()))
-
-	if err := write(data); err != nil {
-		w.Reset()
-		return err
-	}
-
-	w.Reset()
+	_ = "STUB: not implemented"
 	return nil
+
+	// Replace the HW.
 }
 
-func (w *protocolWriter) Len() int {
-	return w.buf.Len()
-}
+func (w *protocolWriter) Len() int { _ = "STUB: not implemented"; return 0 }
 
-func (w *protocolWriter) Reset() {
-	w.buf.Reset()
-	w.lastOffset = -1
+func (w *protocolWriter) Reset() { _ = "STUB: not implemented"; return }
 
-	// Write envelope header.
-	w.dataPos = proto.WriteReplicationResponseHeader(w.buf)
+// Write envelope header.
 
-	// Write the leader epoch.
-	binary.Write(w.buf, proto.Encoding, w.replicator.epoch)
-	// Reserve space for the HW. This will be replaced with the HW at the time
-	// of flush.
-	binary.Write(w.buf, proto.Encoding, int64(0))
-}
+// Write the leader epoch.
+
+// Reserve space for the HW. This will be replaced with the HW at the time
+// of flush.

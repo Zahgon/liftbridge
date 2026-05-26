@@ -44,48 +44,19 @@ type failoverStatus struct {
 	witnesses map[string]struct{}
 }
 
-func newFailoverStatus(f failover) *failoverStatus {
-	return &failoverStatus{
-		failover:  f,
-		witnesses: make(map[string]struct{}),
-	}
-}
+func newFailoverStatus(f failover) *failoverStatus { _ = "STUB: not implemented"; return nil }
 
 // report adds the given witness to the failoverStatus witnesses. If a quorum
 // of witnesses have reported the leader, a new leader will be selected.
 // Otherwise, the expiration timer is reset. A Status is returned if selecting
 // a new leader fails.
 func (f *failoverStatus) report(ctx context.Context, witness string) *status.Status {
-	f.mu.Lock()
-
-	f.witnesses[witness] = struct{}{}
-	leaderFailed := len(f.witnesses) > f.failover.Quorum()
-
-	if leaderFailed {
-		if f.timer != nil {
-			f.timer.Stop()
-		}
-		f.mu.Unlock()
-		return f.failover.Failover(ctx)
-	}
-
-	if f.timer != nil {
-		f.timer.Reset(f.failover.Timeout())
-	} else {
-		f.timer = time.AfterFunc(f.failover.Timeout(), f.failover.OnExpired)
-	}
-	f.mu.Unlock()
+	_ = "STUB: not implemented"
 	return nil
 }
 
 // cancel stops the expiration timer, if there is one.
-func (f *failoverStatus) cancel() {
-	f.mu.Lock()
-	defer f.mu.Unlock()
-	if f.timer != nil {
-		f.timer.Stop()
-	}
-}
+func (f *failoverStatus) cancel() { _ = "STUB: not implemented"; return }
 
 // partitionFailover implements the failover interface for a stream partition
 // leader. When a majority of a partition's ISR report the leader as failed, a
@@ -99,39 +70,38 @@ type partitionFailover struct {
 
 func newPartitionFailoverStatus(partition *partition, timeout time.Duration,
 	onExpired failoverExpiredHandler, onFailover failoverHandler) *failoverStatus {
-
-	return newFailoverStatus(&partitionFailover{
-		partition:  partition,
-		timeout:    timeout,
-		onExpired:  onExpired,
-		onFailover: onFailover,
-	})
+	_ = "STUB: not implemented"
+	return nil
 }
 
 // Quorum returns (partition ISR size - 1) / 2. One is subtracted from the ISR
 // size to exclude the leader.
-func (p *partitionFailover) Quorum() int {
-	return (p.partition.ISRSize() - 1) / 2
-}
+func (p *partitionFailover) Quorum() int { _ = "STUB: not implemented"; return 0 }
 
 // Timeout returns the configured ReplicaMaxLeaderTimeout.
 func (p *partitionFailover) Timeout() time.Duration {
-	return p.timeout
+	_ = "STUB: not implemented"
+
+	// OnExpired expires the failover.
+	return *new(time.Duration)
 }
 
-// OnExpired expires the failover.
 func (p *partitionFailover) OnExpired() {
-	p.onExpired()
+	_ = "STUB: not implemented"
+
+	// Failover selects a new leader.
+	return
 }
 
-// Failover selects a new leader.
 func (p *partitionFailover) Failover(ctx context.Context) *status.Status {
-	return p.onFailover(ctx)
+	_ = "STUB: not implemented"
+	return nil
+
+	// groupFailover implements the failover interface for a consumer group
+	// coordinator. When a majority of a consumer group's members report the
+	// coordinator as failed, a new coordinator is selected.
 }
 
-// groupFailover implements the failover interface for a consumer group
-// coordinator. When a majority of a consumer group's members report the
-// coordinator as failed, a new coordinator is selected.
 type groupFailover struct {
 	group      *consumerGroup
 	timeout    time.Duration
@@ -141,31 +111,29 @@ type groupFailover struct {
 
 func newGroupFailoverStatus(group *consumerGroup, timeout time.Duration,
 	onExpired failoverExpiredHandler, onFailover failoverHandler) *failoverStatus {
-
-	return newFailoverStatus(&groupFailover{
-		group:      group,
-		timeout:    timeout,
-		onExpired:  onExpired,
-		onFailover: onFailover,
-	})
+	_ = "STUB: not implemented"
+	return nil
 }
 
 // Quorum returns members / 2.
-func (g *groupFailover) Quorum() int {
-	return len(g.group.GetMembers()) / 2
-}
+func (g *groupFailover) Quorum() int { _ = "STUB: not implemented"; return 0 }
 
 // Timeout returns the configured GroupsCoordinatorTimeout.
 func (g *groupFailover) Timeout() time.Duration {
-	return g.timeout
+	_ = "STUB: not implemented"
+
+	// OnExpired expires the failover.
+	return *new(time.Duration)
 }
 
-// OnExpired expires the failover.
 func (g *groupFailover) OnExpired() {
-	g.onExpired()
+	_ = "STUB: not implemented"
+
+	// Failover selects a new coordinator.
+	return
 }
 
-// Failover selects a new coordinator.
 func (g *groupFailover) Failover(ctx context.Context) *status.Status {
-	return g.onFailover(ctx)
+	_ = "STUB: not implemented"
+	return nil
 }

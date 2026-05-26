@@ -2,7 +2,6 @@ package common
 
 import (
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/HdrHistogram/hdrhistogram-go"
@@ -26,140 +25,73 @@ type Stats struct {
 }
 
 // NewStats creates a new Stats instance with HDR histogram initialized.
-func NewStats() *Stats {
-	return &Stats{
-		latencyHist: hdrhistogram.New(1, 60000000, 3),
-	}
-}
+func NewStats() *Stats { _ = "STUB: not implemented"; return nil }
 
 // Start begins the timing period.
-func (s *Stats) Start() {
-	s.startTime = time.Now()
-}
+func (s *Stats) Start() { _ = "STUB: not implemented"; return }
 
 // Stop ends the timing period.
-func (s *Stats) Stop() {
-	s.endTime = time.Now()
-}
+func (s *Stats) Stop() { _ = "STUB: not implemented"; return }
 
 // RecordSent records a sent message with its byte size.
-func (s *Stats) RecordSent(bytes int) {
-	atomic.AddInt64(&s.messagesSent, 1)
-	atomic.AddInt64(&s.bytesSent, int64(bytes))
-}
+func (s *Stats) RecordSent(bytes int) { _ = "STUB: not implemented"; return }
 
 // RecordReceived records a received message with its byte size.
-func (s *Stats) RecordReceived(bytes int) {
-	atomic.AddInt64(&s.messagesRecv, 1)
-	atomic.AddInt64(&s.bytesRecv, int64(bytes))
-}
+func (s *Stats) RecordReceived(bytes int) { _ = "STUB: not implemented"; return }
 
 // RecordLatency records a latency measurement.
-func (s *Stats) RecordLatency(d time.Duration) {
-	s.mu.Lock()
-	s.latencyHist.RecordValue(d.Microseconds())
-	s.mu.Unlock()
-}
+func (s *Stats) RecordLatency(d time.Duration) { _ = "STUB: not implemented"; return }
 
 // RecordError increments the error counter.
-func (s *Stats) RecordError() {
-	atomic.AddInt64(&s.errors, 1)
-}
+func (s *Stats) RecordError() { _ = "STUB: not implemented"; return }
 
 // Duration returns the total benchmark duration.
-func (s *Stats) Duration() time.Duration {
-	return s.endTime.Sub(s.startTime)
-}
+func (s *Stats) Duration() time.Duration { _ = "STUB: not implemented"; return *new(time.Duration) }
 
 // MessagesSent returns the total messages sent.
-func (s *Stats) MessagesSent() int64 {
-	return atomic.LoadInt64(&s.messagesSent)
-}
+func (s *Stats) MessagesSent() int64 { _ = "STUB: not implemented"; return 0 }
 
 // MessagesReceived returns the total messages received.
-func (s *Stats) MessagesReceived() int64 {
-	return atomic.LoadInt64(&s.messagesRecv)
-}
+func (s *Stats) MessagesReceived() int64 { _ = "STUB: not implemented"; return 0 }
 
 // TotalMessages returns sent + received messages.
-func (s *Stats) TotalMessages() int64 {
-	return s.MessagesSent() + s.MessagesReceived()
-}
+func (s *Stats) TotalMessages() int64 { _ = "STUB: not implemented"; return 0 }
 
 // BytesSent returns the total bytes sent.
-func (s *Stats) BytesSent() int64 {
-	return atomic.LoadInt64(&s.bytesSent)
-}
+func (s *Stats) BytesSent() int64 { _ = "STUB: not implemented"; return 0 }
 
 // BytesReceived returns the total bytes received.
-func (s *Stats) BytesReceived() int64 {
-	return atomic.LoadInt64(&s.bytesRecv)
-}
+func (s *Stats) BytesReceived() int64 { _ = "STUB: not implemented"; return 0 }
 
 // TotalBytes returns sent + received bytes.
-func (s *Stats) TotalBytes() int64 {
-	return s.BytesSent() + s.BytesReceived()
-}
+func (s *Stats) TotalBytes() int64 { _ = "STUB: not implemented"; return 0 }
 
 // Errors returns the total error count.
-func (s *Stats) Errors() int64 {
-	return atomic.LoadInt64(&s.errors)
-}
+func (s *Stats) Errors() int64 { _ = "STUB: not implemented"; return 0 }
 
 // MessagesPerSecond calculates the message throughput.
-func (s *Stats) MessagesPerSecond() float64 {
-	duration := s.Duration().Seconds()
-	if duration == 0 {
-		return 0
-	}
-	return float64(s.TotalMessages()) / duration
-}
+func (s *Stats) MessagesPerSecond() float64 { _ = "STUB: not implemented"; return 0 }
 
 // BytesPerSecond calculates the byte throughput.
-func (s *Stats) BytesPerSecond() float64 {
-	duration := s.Duration().Seconds()
-	if duration == 0 {
-		return 0
-	}
-	return float64(s.TotalBytes()) / duration
-}
+func (s *Stats) BytesPerSecond() float64 { _ = "STUB: not implemented"; return 0 }
 
 // MBPerSecond calculates the MB/s throughput.
-func (s *Stats) MBPerSecond() float64 {
-	return s.BytesPerSecond() / 1024 / 1024
-}
+func (s *Stats) MBPerSecond() float64 { _ = "STUB: not implemented"; return 0 }
 
 // LatencyPercentile returns the latency at a given percentile.
 func (s *Stats) LatencyPercentile(p float64) time.Duration {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	return time.Duration(s.latencyHist.ValueAtQuantile(p)) * time.Microsecond
+	_ = "STUB: not implemented"
+	return *new(time.Duration)
 }
 
 // LatencyMean returns the mean latency.
-func (s *Stats) LatencyMean() time.Duration {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	return time.Duration(s.latencyHist.Mean()) * time.Microsecond
-}
+func (s *Stats) LatencyMean() time.Duration { _ = "STUB: not implemented"; return *new(time.Duration) }
 
 // LatencyMin returns the minimum latency recorded.
-func (s *Stats) LatencyMin() time.Duration {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	return time.Duration(s.latencyHist.Min()) * time.Microsecond
-}
+func (s *Stats) LatencyMin() time.Duration { _ = "STUB: not implemented"; return *new(time.Duration) }
 
 // LatencyMax returns the maximum latency recorded.
-func (s *Stats) LatencyMax() time.Duration {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	return time.Duration(s.latencyHist.Max()) * time.Microsecond
-}
+func (s *Stats) LatencyMax() time.Duration { _ = "STUB: not implemented"; return *new(time.Duration) }
 
 // LatencyCount returns the number of latency samples recorded.
-func (s *Stats) LatencyCount() int64 {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	return s.latencyHist.TotalCount()
-}
+func (s *Stats) LatencyCount() int64 { _ = "STUB: not implemented"; return 0 }

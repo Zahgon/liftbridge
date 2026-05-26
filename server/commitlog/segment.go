@@ -1,11 +1,8 @@
 package commitlog
 
 import (
-	"fmt"
 	"io"
 	"os"
-	"path/filepath"
-	"sort"
 	"sync"
 	"time"
 
@@ -75,34 +72,11 @@ type segment struct {
 }
 
 func newSegment(path string, baseOffset, maxBytes int64, isNew bool, suffix string) (*segment, error) {
-	s := &segment{
-		maxBytes:    maxBytes,
-		BaseOffset:  baseOffset,
-		firstOffset: -1,
-		lastOffset:  -1,
-		path:        path,
-		suffix:      suffix,
-		waiters:     make(map[interface{}]chan struct{}),
-	}
-	// If this is a new segment, ensure the file doesn't already exist.
-	if isNew && exists(s.logPath()) {
-		return nil, ErrSegmentExists
-	}
-	log, err := os.OpenFile(s.logPath(), os.O_RDWR|os.O_CREATE|os.O_APPEND, 0644)
-	if err != nil {
-		return nil, errors.Wrap(err, "open file failed")
-	}
-	info, err := log.Stat()
-	if err != nil {
-		return nil, errors.Wrap(err, "stat file failed")
-	}
-	s.log = log
-	s.position = info.Size()
-	s.writer = log
-	s.reader = log
-	err = s.setupIndex()
-	return s, err
+	_ = "STUB: not implemented"
+	return nil, nil
 }
+
+// If this is a new segment, ensure the file doesn't already exist.
 
 // setupIndex creates and initializes an index.
 // Initialization is:
@@ -110,503 +84,195 @@ func newSegment(path string, baseOffset, maxBytes int64, isNew bool, suffix stri
 // - Initialize firstOffset/lastOffset
 // - Initialize firstWriteTime/lastWriteTime
 // If the index is corrupt, it will attempt to rebuild it from the log file.
-func (s *segment) setupIndex() (err error) {
-	s.Index, err = newIndex(options{
-		path:       s.indexPath(),
-		baseOffset: s.BaseOffset,
-	})
-	if err != nil {
-		return err
-	}
-	lastEntry, err := s.Index.InitializePosition()
-	if err != nil {
-		if err == errIndexCorrupt {
-			// Index is corrupt, attempt to rebuild from log file
-			if rebuildErr := s.rebuildIndex(); rebuildErr != nil {
-				return errors.Wrap(rebuildErr, "failed to rebuild corrupt index")
-			}
-			// Re-initialize after rebuild
-			lastEntry, err = s.Index.InitializePosition()
-			if err != nil {
-				return errors.Wrap(err, "failed to initialize rebuilt index")
-			}
-		} else {
-			return err
-		}
-	}
-	// If lastEntry is nil, the index is empty.
-	if lastEntry != nil {
-		s.lastOffset = lastEntry.Offset
-		s.lastWriteTime = lastEntry.Timestamp
-		// Read the first entry to get firstOffset and firstWriteTime.
-		var firstEntry entry
-		if err := s.Index.ReadEntryAtFileOffset(&firstEntry, 0); err != nil {
-			return err
-		}
-		s.firstOffset = firstEntry.Offset
-		s.firstWriteTime = firstEntry.Timestamp
-	}
-	return nil
-}
+func (s *segment) setupIndex() (err error) { _ = "STUB: not implemented"; return nil }
+
+// Index is corrupt, attempt to rebuild from log file
+
+// Re-initialize after rebuild
+
+// If lastEntry is nil, the index is empty.
+
+// Read the first entry to get firstOffset and firstWriteTime.
 
 // rebuildIndex rebuilds the index by scanning the log file.
 // This is called when a corrupt index is detected.
 func (s *segment) rebuildIndex() error {
+	_ = "STUB: not implemented"
 	// Close and remove the corrupt index
-	if s.Index != nil {
-		s.Index.Close() // Ignore close errors on corrupt index
-	}
-	if err := os.Remove(s.indexPath()); err != nil && !os.IsNotExist(err) {
-		return errors.Wrap(err, "failed to remove corrupt index file")
-	}
-
-	// Create a fresh index
-	var err error
-	s.Index, err = newIndex(options{
-		path:       s.indexPath(),
-		baseOffset: s.BaseOffset,
-	})
-	if err != nil {
-		return errors.Wrap(err, "failed to create new index")
-	}
-
-	// Reset index position to 0 so we write from the beginning.
-	// newIndex() sets position = file size (10MB pre-allocated), but we need
-	// to write from the start. We can't call InitializePosition() here because
-	// it would fail on ReadAt due to position bounds checking. After we rebuild
-	// the entries, setupIndex will call InitializePosition() to finalize.
-	s.Index.mu.Lock()
-	s.Index.position = 0
-	s.Index.mu.Unlock()
-
-	// If log file is empty, we're done
-	if s.position == 0 {
-		return nil
-	}
-
-	// Scan the log file and rebuild index entries
-	var pos int64
-	headerBuf := make([]byte, msgSetHeaderLen)
-
-	for pos < s.position {
-		// Read message set header
-		n, err := s.log.ReadAt(headerBuf, pos)
-		if err != nil {
-			if err == io.EOF {
-				break
-			}
-			return errors.Wrap(err, "failed to read log during index rebuild")
-		}
-		if n < msgSetHeaderLen {
-			// Partial header, stop here
-			break
-		}
-
-		ms := messageSet(headerBuf)
-		offset := ms.Offset()
-		timestamp := ms.Timestamp()
-		leaderEpoch := ms.LeaderEpoch()
-		size := ms.Size()
-
-		// Validate the entry looks reasonable
-		if size < 0 || size > 100*1024*1024 { // Max 100MB message
-			// Invalid size, stop here
-			break
-		}
-
-		// Check we have enough data for the full message
-		if pos+msgSetHeaderLen+int64(size) > s.position {
-			// Incomplete message, stop here
-			break
-		}
-
-		// Create index entry
-		e := &entry{
-			Offset:      offset,
-			Timestamp:   timestamp,
-			LeaderEpoch: leaderEpoch,
-			Position:    pos,
-			Size:        size + msgSetHeaderLen,
-		}
-
-		if err := s.Index.writeEntries([]*entry{e}); err != nil {
-			return errors.Wrap(err, "failed to write index entry during rebuild")
-		}
-
-		pos += msgSetHeaderLen + int64(size)
-	}
-
-	// After rebuilding, set position to file size so InitializePosition() can
-	// read all entries during its binary search. The entries we wrote are
-	// non-zero, and the rest of the pre-allocated file is zeros (empty entries).
-	s.Index.mu.Lock()
-	s.Index.position = s.Index.size
-	s.Index.mu.Unlock()
-
 	return nil
 }
+
+// Ignore close errors on corrupt index
+
+// Create a fresh index
+
+// Reset index position to 0 so we write from the beginning.
+// newIndex() sets position = file size (10MB pre-allocated), but we need
+// to write from the start. We can't call InitializePosition() here because
+// it would fail on ReadAt due to position bounds checking. After we rebuild
+// the entries, setupIndex will call InitializePosition() to finalize.
+
+// If log file is empty, we're done
+
+// Scan the log file and rebuild index entries
+
+// Read message set header
+
+// Partial header, stop here
+
+// Validate the entry looks reasonable
+// Max 100MB message
+// Invalid size, stop here
+
+// Check we have enough data for the full message
+
+// Incomplete message, stop here
+
+// Create index entry
+
+// After rebuilding, set position to file size so InitializePosition() can
+// read all entries during its binary search. The entries we wrote are
+// non-zero, and the rest of the pre-allocated file is zeros (empty entries).
 
 // CheckSplit determines if a new log segment should be rolled out either
 // because this segment is full or LogRollTime has passed since the first
 // message was written to the segment.
 func (s *segment) CheckSplit(logRollTime time.Duration) bool {
-	s.RLock()
-	defer s.RUnlock()
-	if s.position >= s.maxBytes {
-		return true
-	}
-	if logRollTime == 0 || s.firstWriteTime == 0 {
-		// Don't roll a new segment if there have been no writes to the segment
-		// or LogRollTime is disabled.
-		return false
-	}
-	// Check if LogRollTime has passed since first write.
-	return timestamp()-s.firstWriteTime >= int64(logRollTime)
+	_ = "STUB: not implemented"
+	return false
 }
+
+// Don't roll a new segment if there have been no writes to the segment
+// or LogRollTime is disabled.
+
+// Check if LogRollTime has passed since first write.
 
 // Seal a segment from being written to. This is called on the former active
 // segment after a new segment is rolled or when the segment is closed. This is
 // a no-op if the segment is already sealed.
-func (s *segment) Seal() {
-	s.Lock()
-	defer s.Unlock()
-	s.seal()
-}
+func (s *segment) Seal() { _ = "STUB: not implemented"; return }
 
-func (s *segment) seal() {
-	if s.sealed {
-		return
-	}
-	s.sealed = true
-	// Notify any readers waiting for data.
-	s.notifyWaiters()
-	s.Index.Shrink() // nolint: errcheck
-}
+func (s *segment) seal() { _ = "STUB: not implemented"; return }
 
-func (s *segment) NextOffset() int64 {
-	s.RLock()
-	defer s.RUnlock()
-	// If the segment hasn't been written to, the next offset should be the
-	// base offset.
-	if s.lastOffset == -1 {
-		return s.BaseOffset
-	}
-	return s.lastOffset + 1
-}
+// Notify any readers waiting for data.
 
-func (s *segment) FirstOffset() int64 {
-	s.RLock()
-	defer s.RUnlock()
-	return s.firstOffset
-}
+// nolint: errcheck
 
-func (s *segment) FirstWriteTime() int64 {
-	s.RLock()
-	defer s.RUnlock()
-	return s.firstWriteTime
-}
+func (s *segment) NextOffset() int64 { _ = "STUB: not implemented"; return 0 }
 
-func (s *segment) LastOffset() int64 {
-	s.RLock()
-	defer s.RUnlock()
-	return s.lastOffset
-}
+// If the segment hasn't been written to, the next offset should be the
+// base offset.
 
-func (s *segment) Position() int64 {
-	s.RLock()
-	defer s.RUnlock()
-	return s.position
-}
+func (s *segment) FirstOffset() int64 { _ = "STUB: not implemented"; return 0 }
 
-func (s *segment) IsEmpty() bool {
-	s.RLock()
-	defer s.RUnlock()
-	return s.firstOffset == -1
-}
+func (s *segment) FirstWriteTime() int64 { _ = "STUB: not implemented"; return 0 }
 
-func (s *segment) MessageCount() int64 {
-	s.RLock()
-	defer s.RUnlock()
-	return s.Index.CountEntries()
-}
+func (s *segment) LastOffset() int64 { _ = "STUB: not implemented"; return 0 }
+
+func (s *segment) Position() int64 { _ = "STUB: not implemented"; return 0 }
+
+func (s *segment) IsEmpty() bool { _ = "STUB: not implemented"; return false }
+
+func (s *segment) MessageCount() int64 { _ = "STUB: not implemented"; return 0 }
 
 func (s *segment) WriteMessageSet(ms []byte, entries []*entry) error {
-	s.Lock()
-	defer s.Unlock()
-	if _, err := s.write(ms, entries); err != nil {
-		return err
-	}
-	return s.Index.writeEntries(entries)
+	_ = "STUB: not implemented"
+	return nil
 }
 
 // write a byte slice to the log at the current position. This increments the
 // offset as well as sets the position to the new tail.
 func (s *segment) write(p []byte, entries []*entry) (n int, err error) {
-	if s.closed {
-		return 0, ErrSegmentClosed
-	}
-	n, err = s.writer.Write(p)
-	if err != nil {
-		return n, errors.Wrap(err, "log write failed")
-	}
-	s.position += int64(n)
-	if s.firstWriteTime == 0 {
-		first := entries[0]
-		s.firstOffset = first.Offset
-		s.firstWriteTime = first.Timestamp
-	}
-	last := entries[len(entries)-1]
-	s.lastOffset = last.Offset
-	s.lastWriteTime = last.Timestamp
-	s.notifyWaiters()
-	return n, nil
+	_ = "STUB: not implemented"
+	return 0, nil
 }
 
 func (s *segment) ReadAt(p []byte, off int64) (n int, err error) {
-	s.RLock()
-	defer s.RUnlock()
-	if s.closed {
-		if s.replaced {
-			return 0, ErrSegmentReplaced
-		}
-		return 0, ErrSegmentClosed
-	}
-	return s.log.ReadAt(p, off)
+	_ = "STUB: not implemented"
+	return 0, nil
 }
 
-func (s *segment) notifyWaiters() {
-	for r, ch := range s.waiters {
-		close(ch)
-		delete(s.waiters, r)
-	}
-}
+func (s *segment) notifyWaiters() { _ = "STUB: not implemented"; return }
 
 func (s *segment) WaitForLEO(waiter interface{}, expectedLEO, actualLEO int64) <-chan struct{} {
-	s.Lock()
-	defer s.Unlock()
+	_ = "STUB: not implemented"
+	return nil
+
 	// Check expected LEO against last known LEO and against the current
 	// (active) segment's last offset in case the LEO changed since we last
 	// checked it. If the current segment's last offset is -1, this means the
 	// segment is empty and we should wait for data.
-	if expectedLEO != actualLEO || (expectedLEO != s.lastOffset && s.lastOffset != -1) {
-		// LEO has since changed so close channel immediately.
-		ch := make(chan struct{})
-		close(ch)
-		return ch
-	}
-	return s.waitForData(waiter, s.position)
 }
+
+// LEO has since changed so close channel immediately.
+
 func (s *segment) WaitForData(waiter interface{}, pos int64) <-chan struct{} {
-	s.Lock()
-	ch := s.waitForData(waiter, pos)
-	s.Unlock()
-	return ch
-}
-
-func (s *segment) waitForData(waiter interface{}, pos int64) <-chan struct{} {
-	// Check if we're already registered.
-	wait, ok := s.waiters[waiter]
-	if ok {
-		return wait
-	}
-	wait = make(chan struct{})
-	// Check if data has been written and/or the segment was filled.
-	if s.position > pos || s.position >= s.maxBytes {
-		close(wait)
-	} else {
-		s.waiters[waiter] = wait
-	}
-	return wait
-}
-
-func (s *segment) removeWaiter(waiter interface{}) {
-	s.Lock()
-	delete(s.waiters, waiter)
-	s.Unlock()
-}
-
-// Close a segment such that it can no longer be read from or written to. This
-// operation is idempotent.
-func (s *segment) Close() error {
-	s.Lock()
-	defer s.Unlock()
-	return s.close()
-}
-
-func (s *segment) close() error {
-	if s.closed {
-		return nil
-	}
-	if err := s.log.Close(); err != nil {
-		return err
-	}
-	if err := s.Index.Close(); err != nil {
-		return err
-	}
-	s.closed = true
-	s.seal()
+	_ = "STUB: not implemented"
 	return nil
 }
 
-// Cleaned creates a cleaned segment for this segment.
-func (s *segment) Cleaned() (*segment, error) {
-	return newSegment(s.path, s.BaseOffset, s.maxBytes, false, cleanedSuffix)
+func (s *segment) waitForData(waiter interface{}, pos int64) <-chan struct{} {
+	_ = "STUB: not implemented"
+	// Check if we're already registered.
+	return nil
 }
+
+// Check if data has been written and/or the segment was filled.
+
+func (s *segment) removeWaiter(waiter interface{}) { _ = "STUB: not implemented"; return }
+
+// Close a segment such that it can no longer be read from or written to. This
+// operation is idempotent.
+func (s *segment) Close() error { _ = "STUB: not implemented"; return nil }
+
+func (s *segment) close() error { _ = "STUB: not implemented"; return nil }
+
+// Cleaned creates a cleaned segment for this segment.
+func (s *segment) Cleaned() (*segment, error) { _ = "STUB: not implemented"; return nil, nil }
 
 // Truncated creates a truncated segment for this segment.
-func (s *segment) Truncated() (*segment, error) {
-	return newSegment(s.path, s.BaseOffset, s.maxBytes, false, truncatedSuffix)
-}
+func (s *segment) Truncated() (*segment, error) { _ = "STUB: not implemented"; return nil, nil }
 
 // Replace replaces the given segment with the callee.
-func (s *segment) Replace(old *segment) error {
-	s.Lock()
-	defer s.Unlock()
-	old.Lock()
-	defer old.Unlock()
-	if err := old.close(); err != nil {
-		return err
-	}
-	if err := s.close(); err != nil {
-		return err
-	}
-	if err := os.Rename(s.logPath(), old.logPath()); err != nil {
-		return err
-	}
-	if err := os.Rename(s.indexPath(), old.indexPath()); err != nil {
-		return err
-	}
-	s.suffix = ""
-	log, err := os.OpenFile(s.logPath(), os.O_RDWR|os.O_CREATE|os.O_APPEND, 0644)
-	if err != nil {
-		return errors.Wrap(err, "open file failed")
-	}
-	s.log = log
-	s.writer = log
-	s.reader = log
-	s.closed = false
-	old.replaced = true
-	return s.setupIndex()
-}
+func (s *segment) Replace(old *segment) error { _ = "STUB: not implemented"; return nil }
 
 // findEntry returns the first entry whose offset is greater than or equal to
 // the given offset.
 func (s *segment) findEntry(offset int64) (*entry, error) {
-	s.RLock()
-	defer s.RUnlock()
-	var (
-		entry = &entry{}
-		n     = int(s.Index.Position() / entryWidth)
-		err   error
-	)
-	idx := sort.Search(n, func(i int) bool {
-		if e := s.Index.ReadEntryAtFileOffset(entry, int64(i*entryWidth)); e != nil {
-			err = e
-			return true
-		}
-		return entry.Offset >= offset
-	})
-	if err != nil {
-		return nil, err
-	}
-	if idx == n {
-		return nil, ErrEntryNotFound
-	}
-	err = s.Index.ReadEntryAtFileOffset(entry, int64(idx*entryWidth))
-	return entry, err
+	_ = "STUB: not implemented"
+	return nil, nil
 }
 
 // findEntryByTimestamp returns the first entry whose timestamp is greater than
 // or equal to the given timestamp.
 func (s *segment) findEntryByTimestamp(timestamp int64) (*entry, error) {
-	s.RLock()
-	defer s.RUnlock()
-	var (
-		entry = &entry{}
-		n     = int(s.Index.CountEntries())
-		err   error
-	)
-	idx := sort.Search(n, func(i int) bool {
-		if e := s.Index.ReadEntryAtLogOffset(entry, int64(i)); e != nil {
-			err = e
-			return true
-		}
-		return entry.Timestamp >= timestamp
-	})
-	if err != nil {
-		return nil, err
-	}
-	if idx == n {
-		return nil, ErrEntryNotFound
-	}
-	err = s.Index.ReadEntryAtLogOffset(entry, int64(idx))
-	return entry, err
+	_ = "STUB: not implemented"
+	return nil, nil
 }
 
 // Delete closes the segment and then deletes its log and index files.
-func (s *segment) Delete() error {
-	if err := s.Close(); err != nil {
-		return err
-	}
-	s.Lock()
-	defer s.Unlock()
-	if exists(s.log.Name()) {
-		if err := os.Remove(s.log.Name()); err != nil {
-			return err
-		}
-	}
-	if exists(s.Index.Name()) {
-		if err := os.Remove(s.Index.Name()); err != nil {
-			return err
-		}
-	}
-	return nil
-}
+func (s *segment) Delete() error { _ = "STUB: not implemented"; return nil }
 
 // MarkDeleted marks the segment as deleted, removing it from the read path.
 // This should be called before actually deleting files to ensure readers
 // don't see the segment while deletion is in progress.
-func (s *segment) MarkDeleted() {
-	s.Lock()
-	defer s.Unlock()
-	s.deleted = true
-}
+func (s *segment) MarkDeleted() { _ = "STUB: not implemented"; return }
 
 // IsDeleted returns true if the segment has been marked for deletion.
-func (s *segment) IsDeleted() bool {
-	s.RLock()
-	defer s.RUnlock()
-	return s.deleted
-}
+func (s *segment) IsDeleted() bool { _ = "STUB: not implemented"; return false }
 
 type segmentScanner struct {
 	s  *segment
 	is *indexScanner
 }
 
-func newSegmentScanner(segment *segment) *segmentScanner {
-	return &segmentScanner{s: segment, is: newIndexScanner(segment.Index)}
-}
+func newSegmentScanner(segment *segment) *segmentScanner { _ = "STUB: not implemented"; return nil }
 
 // Scan should be called repeatedly to iterate over the messages in the
 // segment, it will return io.EOF when there are no more messages.
 func (s *segmentScanner) Scan() (messageSet, *entry, error) {
-	entry, err := s.is.Scan()
-	if err != nil {
-		return nil, nil, err
-	}
-	header := make(messageSet, msgSetHeaderLen)
-	_, err = s.s.ReadAt(header, entry.Position)
-	if err != nil {
-		return nil, nil, err
-	}
-	payload := make([]byte, header.Size())
-	_, err = s.s.ReadAt(payload, entry.Position+msgSetHeaderLen)
-	if err != nil {
-		return nil, nil, err
-	}
-	msgSet := append(header, payload...)
-	return msgSet, entry, nil
+	_ = "STUB: not implemented"
+	return *new(messageSet), nil, nil
 }
 
 // reverseSegmentScanner is used to iterate over messages in a segment in
@@ -619,48 +285,25 @@ type reverseSegmentScanner struct {
 // newReverseSegmentScanner creates a scanner that iterates from the given
 // offset backwards.
 func newReverseSegmentScanner(segment *segment, startOffset int64) *reverseSegmentScanner {
+	_ = "STUB: not implemented"
 	// Convert log offset to index entry offset
-	entryOffset := startOffset - segment.BaseOffset
-	return &reverseSegmentScanner{
-		s:   segment,
-		ris: newReverseIndexScanner(segment.Index, entryOffset),
-	}
+	return nil
 }
 
 // newReverseSegmentScannerFromEnd creates a scanner that starts at the last
 // message in the segment and iterates backwards.
 func newReverseSegmentScannerFromEnd(segment *segment) *reverseSegmentScanner {
-	return &reverseSegmentScanner{
-		s:   segment,
-		ris: newReverseIndexScannerFromEnd(segment.Index),
-	}
+	_ = "STUB: not implemented"
+	return nil
 }
 
 // Scan reads the current message and moves to the previous one.
 // Returns io.EOF when there are no more messages.
 func (s *reverseSegmentScanner) Scan() (messageSet, *entry, error) {
-	entry, err := s.ris.Scan()
-	if err != nil {
-		return nil, nil, err
-	}
-	header := make(messageSet, msgSetHeaderLen)
-	_, err = s.s.ReadAt(header, entry.Position)
-	if err != nil {
-		return nil, nil, err
-	}
-	payload := make([]byte, header.Size())
-	_, err = s.s.ReadAt(payload, entry.Position+msgSetHeaderLen)
-	if err != nil {
-		return nil, nil, err
-	}
-	msgSet := append(header, payload...)
-	return msgSet, entry, nil
+	_ = "STUB: not implemented"
+	return *new(messageSet), nil, nil
 }
 
-func (s *segment) logPath() string {
-	return filepath.Join(s.path, fmt.Sprintf(fileFormat, s.BaseOffset, logSuffix+s.suffix))
-}
+func (s *segment) logPath() string { _ = "STUB: not implemented"; return "" }
 
-func (s *segment) indexPath() string {
-	return filepath.Join(s.path, fmt.Sprintf(fileFormat, s.BaseOffset, indexSuffix+s.suffix))
-}
+func (s *segment) indexPath() string { _ = "STUB: not implemented"; return "" }

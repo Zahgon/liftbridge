@@ -3,7 +3,6 @@ package commitlog
 import (
 	"encoding/binary"
 	"errors"
-	"math"
 )
 
 var (
@@ -48,22 +47,7 @@ type encoder interface {
 }
 
 // encode serializes the struct to bytes.
-func encode(e encoder) ([]byte, error) {
-	lenEnc := new(lenEncoder)
-	err := e.Encode(lenEnc)
-	if err != nil {
-		return nil, err
-	}
-
-	b := make([]byte, lenEnc.Length)
-	byteEnc := newByteEncoder(b)
-	err = e.Encode(byteEnc)
-	if err != nil {
-		return nil, err
-	}
-
-	return b, nil
-}
+func encode(e encoder) ([]byte, error) { _ = "STUB: not implemented"; return nil, nil }
 
 // lenEncoder is a packetEncoder that tracks the running length of serialized
 // bytes.
@@ -73,126 +57,76 @@ type lenEncoder struct {
 
 // PutBool increments length for a bool.
 func (e *lenEncoder) PutBool(in bool) {
-	e.Length++
+	_ = "STUB: not implemented"
+
+	// PutInt8 increments length for an int8.
+	return
 }
 
-// PutInt8 increments length for an int8.
 func (e *lenEncoder) PutInt8(in int8) {
-	e.Length++
+	_ = "STUB: not implemented"
+
+	// PutInt16 increments length for an int16.
+	return
 }
 
-// PutInt16 increments length for an int16.
 func (e *lenEncoder) PutInt16(in int16) {
-	e.Length += 2
+	_ = "STUB: not implemented"
+
+	// PutInt32 increments length for an int32.
+	return
 }
 
-// PutInt32 increments length for an int32.
 func (e *lenEncoder) PutInt32(in int32) {
-	e.Length += 4
+	_ = "STUB: not implemented"
+
+	// PutInt64 increments length for an int64.
+	return
 }
 
-// PutInt64 increments length for an int64.
 func (e *lenEncoder) PutInt64(in int64) {
-	e.Length += 8
+	_ = "STUB: not implemented"
+
+	// PutArrayLength increments length for an array size.
+	return
 }
 
-// PutArrayLength increments length for an array size.
-func (e *lenEncoder) PutArrayLength(in int) error {
-	if in > math.MaxInt32 {
-		return errInvalidArrayLength
-	}
-	e.Length += 4
-	return nil
-}
+func (e *lenEncoder) PutArrayLength(in int) error { _ = "STUB: not implemented"; return nil }
 
 // arrays
 
 // PutBytes increments length for a size-prefixed byte array.
-func (e *lenEncoder) PutBytes(in []byte) error {
-	e.Length += 4
-	if in == nil {
-		return nil
-	}
-	if len(in) > math.MaxInt32 {
-		return errInvalidByteSliceLength
-	}
-	e.Length += len(in)
-	return nil
-}
+func (e *lenEncoder) PutBytes(in []byte) error { _ = "STUB: not implemented"; return nil }
 
 // PutRawBytes increments length for a raw byte array.
-func (e *lenEncoder) PutRawBytes(in []byte) error {
-	if len(in) > math.MaxInt32 {
-		return errInvalidByteSliceLength
-	}
-	e.Length += len(in)
-	return nil
-}
+func (e *lenEncoder) PutRawBytes(in []byte) error { _ = "STUB: not implemented"; return nil }
 
 // PutString increments length for a string.
-func (e *lenEncoder) PutString(in string) error {
-	e.Length += 2
-	if len(in) > math.MaxInt16 {
-		return errInvalidStringLength
-	}
-	e.Length += len(in)
-	return nil
-}
+func (e *lenEncoder) PutString(in string) error { _ = "STUB: not implemented"; return nil }
 
 // PutNullableString increments length for a nullable string.
-func (e *lenEncoder) PutNullableString(in *string) error {
-	if in == nil {
-		e.Length += 2
-		return nil
-	}
-	return e.PutString(*in)
-}
+func (e *lenEncoder) PutNullableString(in *string) error { _ = "STUB: not implemented"; return nil }
 
 // PutStringArray increments length for a string array.
-func (e *lenEncoder) PutStringArray(in []string) error {
-	err := e.PutArrayLength(len(in))
-	if err != nil {
-		return err
-	}
-
-	for _, str := range in {
-		if err := e.PutString(str); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
+func (e *lenEncoder) PutStringArray(in []string) error { _ = "STUB: not implemented"; return nil }
 
 // PutInt32Array increments length for an int32 array.
-func (e *lenEncoder) PutInt32Array(in []int32) error {
-	err := e.PutArrayLength(len(in))
-	if err != nil {
-		return err
-	}
-	e.Length += 4 * len(in)
-	return nil
-}
+func (e *lenEncoder) PutInt32Array(in []int32) error { _ = "STUB: not implemented"; return nil }
 
 // PutInt64Array increments length for an int64 array.
-func (e *lenEncoder) PutInt64Array(in []int64) error {
-	err := e.PutArrayLength(len(in))
-	if err != nil {
-		return err
-	}
-	e.Length += 8 * len(in)
-	return nil
-}
+func (e *lenEncoder) PutInt64Array(in []int64) error { _ = "STUB: not implemented"; return nil }
 
 // Push increments length based on the pushEncoder's reserved size.
-func (e *lenEncoder) Push(pe pushEncoder) {
-	e.Length += pe.ReserveSize()
-}
+func (e *lenEncoder) Push(pe pushEncoder) { _ = "STUB: not implemented"; return }
 
 // Pop is a no-op.
-func (e *lenEncoder) Pop() {}
+func (e *lenEncoder) Pop() {
+	_ = "STUB: not implemented"
 
-// byteEncoder is a packetEncoder that serializes data into a byte slice.
+	// byteEncoder is a packetEncoder that serializes data into a byte slice.
+	return
+}
+
 type byteEncoder struct {
 	b     []byte
 	off   int
@@ -201,141 +135,61 @@ type byteEncoder struct {
 
 // Bytes returns the underlying byte slice.
 func (e *byteEncoder) Bytes() []byte {
-	return e.b
+	_ = "STUB: not implemented"
+
+	// NewByteEncoder creates a new ByteEncoder with the given backing
+	// pre-allocated byte slice.
+	return nil
 }
 
-// NewByteEncoder creates a new ByteEncoder with the given backing
-// pre-allocated byte slice.
-func newByteEncoder(b []byte) *byteEncoder {
-	return &byteEncoder{b: b}
-}
+func newByteEncoder(b []byte) *byteEncoder { _ = "STUB: not implemented"; return nil }
 
 // PutBool serializes a bool.
-func (e *byteEncoder) PutBool(in bool) {
-	if in {
-		e.b[e.off] = byte(int8(1))
-	}
-	e.off++
-}
+func (e *byteEncoder) PutBool(in bool) { _ = "STUB: not implemented"; return }
 
 // PutInt8 serializes an int8.
-func (e *byteEncoder) PutInt8(in int8) {
-	e.b[e.off] = byte(in)
-	e.off++
-}
+func (e *byteEncoder) PutInt8(in int8) { _ = "STUB: not implemented"; return }
 
 // PutInt16 serializes an int16.
-func (e *byteEncoder) PutInt16(in int16) {
-	encoding.PutUint16(e.b[e.off:], uint16(in))
-	e.off += 2
-}
+func (e *byteEncoder) PutInt16(in int16) { _ = "STUB: not implemented"; return }
 
 // PutInt32 serializes an int32.
-func (e *byteEncoder) PutInt32(in int32) {
-	encoding.PutUint32(e.b[e.off:], uint32(in))
-	e.off += 4
-}
+func (e *byteEncoder) PutInt32(in int32) { _ = "STUB: not implemented"; return }
 
 // PutInt64 serializes an int64.
-func (e *byteEncoder) PutInt64(in int64) {
-	encoding.PutUint64(e.b[e.off:], uint64(in))
-	e.off += 8
-}
+func (e *byteEncoder) PutInt64(in int64) { _ = "STUB: not implemented"; return }
 
 // PutArrayLength serializes an array length as an int32.
-func (e *byteEncoder) PutArrayLength(in int) error {
-	e.PutInt32(int32(in))
-	return nil
-}
+func (e *byteEncoder) PutArrayLength(in int) error { _ = "STUB: not implemented"; return nil }
 
 // PutRawBytes serializes a byte slice.
-func (e *byteEncoder) PutRawBytes(in []byte) error {
-	copy(e.b[e.off:], in)
-	e.off += len(in)
-	return nil
-}
+func (e *byteEncoder) PutRawBytes(in []byte) error { _ = "STUB: not implemented"; return nil }
 
 // PutBytes serializes a size-prefixed byte slice.
-func (e *byteEncoder) PutBytes(in []byte) error {
-	if in == nil {
-		e.PutInt32(-1)
-		return nil
-	}
-	e.PutInt32(int32(len(in)))
-	copy(e.b[e.off:], in)
-	e.off += len(in)
-	return nil
-}
+func (e *byteEncoder) PutBytes(in []byte) error { _ = "STUB: not implemented"; return nil }
 
 // PutString serializes a size-prefixed string.
-func (e *byteEncoder) PutString(in string) error {
-	e.PutInt16(int16(len(in)))
-	copy(e.b[e.off:], in)
-	e.off += len(in)
-	return nil
-}
+func (e *byteEncoder) PutString(in string) error { _ = "STUB: not implemented"; return nil }
 
 // PutNullableString serializes a nullable string.
-func (e *byteEncoder) PutNullableString(in *string) error {
-	if in == nil {
-		e.PutInt16(-1)
-		return nil
-	}
-	return e.PutString(*in)
-}
+func (e *byteEncoder) PutNullableString(in *string) error { _ = "STUB: not implemented"; return nil }
 
 // PutStringArray serializes a string array.
-func (e *byteEncoder) PutStringArray(in []string) error {
-	err := e.PutArrayLength(len(in))
-	if err != nil {
-		return err
-	}
-
-	for _, val := range in {
-		if err := e.PutString(val); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
+func (e *byteEncoder) PutStringArray(in []string) error { _ = "STUB: not implemented"; return nil }
 
 // PutInt32Array serializes an int32 array.
-func (e *byteEncoder) PutInt32Array(in []int32) error {
-	err := e.PutArrayLength(len(in))
-	if err != nil {
-		return err
-	}
-	for _, val := range in {
-		e.PutInt32(val)
-	}
-	return nil
-}
+func (e *byteEncoder) PutInt32Array(in []int32) error { _ = "STUB: not implemented"; return nil }
 
 // PutInt64Array serializes an int64 array.
-func (e *byteEncoder) PutInt64Array(in []int64) error {
-	err := e.PutArrayLength(len(in))
-	if err != nil {
-		return err
-	}
-	for _, val := range in {
-		e.PutInt64(val)
-	}
-	return nil
-}
+func (e *byteEncoder) PutInt64Array(in []int64) error { _ = "STUB: not implemented"; return nil }
 
 // Push adds the given pushEncoder to the stack and saves the current offset
 // position.
-func (e *byteEncoder) Push(pe pushEncoder) {
-	pe.SaveOffset(e.off)
-	e.off += pe.ReserveSize()
-	e.stack = append(e.stack, pe)
-}
+func (e *byteEncoder) Push(pe pushEncoder) { _ = "STUB: not implemented"; return }
 
 // Pop the stack and run the popped pushEncoder on the serialized data.
 func (e *byteEncoder) Pop() {
+	_ = "STUB: not implemented"
 	// this is go's ugly pop pattern (the inverse of append)
-	pe := e.stack[len(e.stack)-1]
-	e.stack = e.stack[:len(e.stack)-1]
-	pe.Fill(e.off, e.b)
+	return
 }

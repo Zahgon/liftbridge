@@ -1,22 +1,11 @@
 package commitlog
 
-import (
-	"os"
-	"sort"
-)
-
 // findSegment returns the first segment whose next assignable offset is
 // greater than the given offset. Returns nil and the index where the segment
 // would be if there is no such segment.
 func findSegment(segments []*segment, offset int64) (*segment, int) {
-	n := len(segments)
-	idx := sort.Search(n, func(i int) bool {
-		return segments[i].NextOffset() > offset
-	})
-	if idx == n {
-		return nil, idx
-	}
-	return segments[idx], idx
+	_ = "STUB: not implemented"
+	return nil, 0
 }
 
 // findSegmentContains returns the first segment whose next assignable offset
@@ -26,11 +15,8 @@ func findSegment(segments []*segment, offset int64) (*segment, int) {
 // be compacted, "contains" does not guarantee the offset is actually present,
 // only that it's within the bounds.
 func findSegmentContains(segments []*segment, offset int64) (*segment, bool) {
-	seg, _ := findSegment(segments, offset)
-	if seg == nil {
-		return nil, false
-	}
-	return seg, seg.BaseOffset <= offset
+	_ = "STUB: not implemented"
+	return nil, false
 }
 
 // findSegmentIndexByTimestamp returns the index of the first segment whose
@@ -38,41 +24,20 @@ func findSegmentContains(segments []*segment, offset int64) (*segment, bool) {
 // the segment would be if there is no segment whose base timestamp is greater,
 // i.e. the length of the slice.
 func findSegmentIndexByTimestamp(segments []*segment, timestamp int64) (int, error) {
-	var (
-		n   = len(segments)
-		err error
-	)
-	idx := sort.Search(n, func(i int) bool {
-		// Read the first entry in the segment to determine the base timestamp.
-		var entry entry
-		if e := segments[i].Index.ReadEntryAtLogOffset(&entry, 0); e != nil {
-			err = e
-			return true
-		}
-		return entry.Timestamp > timestamp
-	})
-	return idx, err
+	_ = "STUB: not implemented"
+	return 0, nil
 }
+
+// Read the first entry in the segment to determine the base timestamp.
 
 // findSegmentByBaseOffset returns the first segment whose base offset is
 // greater than or equal to the given offset. Returns nil if there is no such
 // segment.
 func findSegmentByBaseOffset(segments []*segment, offset int64) *segment {
-	n := len(segments)
-	idx := sort.Search(n, func(i int) bool {
-		return segments[i].BaseOffset >= offset
-	})
-	if idx == n {
-		return nil
-	}
-	return segments[idx]
+	_ = "STUB: not implemented"
+	return nil
 }
 
-func roundDown(total, factor int64) int64 {
-	return factor * (total / factor)
-}
+func roundDown(total, factor int64) int64 { _ = "STUB: not implemented"; return 0 }
 
-func exists(path string) bool {
-	_, err := os.Stat(path)
-	return err == nil
-}
+func exists(path string) bool { _ = "STUB: not implemented"; return false }
